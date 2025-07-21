@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ELK Stack Step-by-Step Implementation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            font-size: 1.3rem;
+            opacity: 0.9;
+        }
+        
+        .timeline {
+            padding: 40px 20px;
+            position: relative;
+        }
+        
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: linear-gradient(to bottom, #667eea, #764ba2);
+            transform: translateX(-50%);
+            z-index: 1;
+        }
+        
+        .phase {
+            position: relative;
+            margin-bottom: 60px;
+            opacity: 0;
+            animation: fadeInUp 0.8s ease forwards;
+        }
+        
+        .phase:nth-child(1) { animation-delay: 0.2s; }
+        .phase:nth-child(2) { animation-delay: 0.4s; }
+        .phase:nth-child(3) { animation-delay: 0.6s; }
+        .phase:nth-child(4) { animation-delay: 0.8s; }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .phase-marker {
+            position: absolute;
+            left: 50%;
+            top: 20px;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            color: white;
+            box-shadow: 0 0 0 8px white, 0 0 0 12px #667eea;
+            z-index: 2;
+            transition: all 0.3s ease;
+        }
+        
+        .phase:hover .phase-marker {
+            transform: translateX(-50%) scale(1.1);
+            box-shadow: 0 0 0 8px white, 0 0 0 12px #764ba2, 0 0 20px rgba(102, 126, 234, 0.5);
+        }
+        
+        .phase-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            align-items: start;
+        }
+        
+        .phase-left {
+            padding-right: 80px;
+            text-align: right;
+        }
+        
+        .phase-right {
+            padding-left: 80px;
+        }
+        
+        .phase:nth-child(even) .phase-left {
+            order: 2;
+            padding-left: 80px;
+            padding-right: 0;
+            text-align: left;
+        }
+        
+        .phase:nth-child(even) .phase-right {
+            order: 1;
+            padding-right: 80px;
+            padding-left: 0;
+        }
+        
+        .phase-title {
+            font-size: 2.2rem;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            position: relative;
+        }
+        
+        .phase-description {
+            font-size: 1.1rem;
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+        
+        .steps-container {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .step {
+            background: white;
+            margin-bottom: 20px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+        
+        .step:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            border-left-color: #667eea;
+        }
+        
+        .step-header {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 15px 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .step-header:hover {
+            background: linear-gradient(135deg, #764ba2, #667eea);
+        }
+        
+        .step-number {
+            background: rgba(255,255,255,0.2);
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            margin-right: 15px;
+        }
+        
+        .step-title {
+            flex: 1;
+            font-size: 1.1rem;
+        }
+        
+        .step-toggle {
+            font-size: 1.2rem;
+            transition: transform 0.3s ease;
+        }
+        
+        .step-content {
+            padding: 20px;
+            display: none;
+            animation: slideDown 0.3s ease;
+        }
+        
+        .step.active .step-content {
+            display: block;
+        }
+        
+        .step.active .step-toggle {
+            transform: rotate(180deg);
+        }
+        
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                max-height: 0;
+            }
+            to {
+                opacity: 1;
+                max-height: 200px;
+            }
+        }
+        
+        .command {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            margin: 10px 0;
+            position: relative;
+            overflow-x: auto;
+            border: 1px solid #34495e;
+        }
+        
+        .command::before {
+            content: '$ ';
+            color: #27ae60;
+            font-weight: bold;
+        }
+        
+        .config {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            margin: 10px 0;
+            font-size: 0.9rem;
+            white-space: pre-line;
+        }
+        
+        .note {
+            background: linear-gradient(135deg, #ffeaa7, #fab1a0);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border-left: 4px solid #e17055;
+        }
+        
+        .note strong {
+            color: #2c3e50;
+        }
+        
+        .success {
+            background: linear-gradient(135deg, #a8e6cf, #88d8a3);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border-left: 4px solid #27ae60;
+        }
+        
+        .architecture-flow {
+            background: linear-gradient(135deg, #74b9ff, #0984e3);
+            color: white;
+            padding: 40px;
+            margin: 40px 0;
+            border-radius: 15px;
+            text-align: center;
+        }
+        
+        .flow-diagram {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .flow-component {
+            background: rgba(255,255,255,0.2);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            min-width: 150px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+        
+        .flow-component:hover {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.05);
+        }
+        
+        .flow-arrow {
+            font-size: 2rem;
+            color: rgba(255,255,255,0.8);
+            animation: pulse 2s infinite;
+        }
+        
+        .verification-section {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 30px 0;
+            text-align: center;
+        }
+        
+        .verification-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .verification-item {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .port-info {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            margin: 5px;
+        }
+        
+        @media (max-width: 768px) {
+            .timeline::before {
+                left: 30px;
+            }
+            
+            .phase-marker {
+                left: 30px;
+            }
+            
+            .phase-content {
+                grid-template-columns: 1fr;
+                margin-left: 80px;
+            }
+            
+            .phase-left,
+            .phase-right {
+                padding: 0;
+                text-align: left;
+            }
+            
+            .phase:nth-child(even) .phase-left {
+                order: 1;
+                padding: 0;
+            }
+            
+            .phase:nth-child(even) .phase-right {
+                order: 2;
+                padding: 0;
+            }
+            
+            .flow-diagram {
+                flex-direction: column;
+            }
+            
+            .flow-arrow {
+                transform: rotate(90deg);
+            }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.1); }
+        }
+        .custom-footer {
+        background: linear-gradient(90deg, #003f5c 60%, #2a5298 100%);
+        color: #fff;
+        font-size: 1.3rem;
+        font-weight: bold;
+        letter-spacing: 1px;
+        padding: 32px 0;
+        margin-top: 48px;
+        border-top: 8px solid #667eea;
+        box-shadow: 0 -4px 24px rgba(0,63,92,0.15);
+        text-align: center;
+        border-radius: 20px 20px 0 0;
+    }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 ELK Stack Implementation</h1>
+            <p>Complete Step-by-Step Visual Guide</p>
+        </div>
+        
+        <div class="architecture-flow">
+            <h2>📊 Final Architecture</h2>
+            <div class="flow-diagram">
+                <div class="flow-component">
+                    <div style="font-size: 2rem; margin-bottom: 10px;">📄</div>
+                    <h4>Filebeat</h4>
+                    <p>Log Shipper</p>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-component">
+                    <div style="font-size: 2rem; margin-bottom: 10px;">⚙️</div>
+                    <h4>Logstash</h4>
+                    <p>Log Processor</p>
+                    <div class="port-info">Port 5044</div>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-component">
+                    <div style="font-size: 2rem; margin-bottom: 10px;">🔍</div>
+                    <h4>Elasticsearch</h4>
+                    <p>Search Engine</p>
+                    <div class="port-info">Port 9200</div>
+                </div>
+                <div class="flow-arrow">↖️</div>
+                <div class="flow-component">
+                    <div style="font-size: 2rem; margin-bottom: 10px;">📈</div>
+                    <h4>Kibana</h4>
+                    <p>Visualization</p>
+                    <div class="port-info">Port 5601</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="timeline">
+            <!-- Phase 1: Prerequisites & Setup -->
+            <div class="phase">
+                <div class="phase-marker">🔧</div>
+                <div class="phase-content">
+                    <div class="phase-left">
+                        <h2 class="phase-title">Phase 1: Prerequisites & Setup</h2>
+                        <p class="phase-description">
+                            Prepare your Ubuntu 22.04 system with necessary dependencies and repositories for the ELK Stack installation.
+                        </p>
+                    </div>
+                    <div class="phase-right">
+                        <div class="steps-container">
+                            <div class="step">
+                                <div class="step-header" onclick="toggleStep(this)">
+                                    <div class="step-number">1</div>
+                                    <div class="step-title">System Update & Java Installation</div>
+                                    <div class="step-toggle">▼</div>
+                                </div>
+                                <div class="step-content">
+                                    <p>Update your system and install Java 17 runtime required by Elasticsearch:</p>
+                                    <div class="command">sudo apt update</div>
+                                    <div class="command">sudo apt install openjdk-17-jre -y</div>
+                                    <div class="success">✅ Java 17 installed successfully!</div>
+                                </div>
+                            </div>
+                            
+                            <div class="step">
+                                <div class="step-header" onclick="toggleStep(this)">
+                                    <div class="step-number">2</div>
+                                    <div class="step-title">Add Elastic Repository</div>
+                                    <div class="step-toggle">▼</div>
+                                </div>
+                                <div class="step-content">
+                                    <p>Import GPG key and add the official Elastic repository:</p>
+                                    <div class="command">wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | sudo gpg --dearmor -o /usr/share/keyrings/elasticsearch-keyring.gpg</div>
+                                    <div class="command">echo "deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] https://artifacts.elastic.co/packages/8.x/apt stable main" | sudo tee /etc/apt/sources.list.d/elastic-8.x.list</div>
+                                    <div class="note"><strong>Note:</strong> This adds the official Elastic 8.x repository to your system.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Phase 2: Core Components Installation -->
+            <div class="phase">
+                <div class="phase-marker">📦</div>
+                <div class="phase-content">
+                    <div class="phase-left">
+                        <h2 class="phase-title">Phase 2: Core Components</h2>
+                        <p class="phase-description">
+                            Install and configure Elasticsearch and Kibana - the core components that handle data storage, search, and visualization.
+                        </p>
+                    </div>
+                    <div class="phase-right">
+                        <div class="steps-container">
+                            <div class="step">
+                                <div class="step-header" onclick="toggleStep(this)">
+                                    <div class="step-number">3</div>
+                                    <div class="step-title">Install Elasticsearch</div>
+                                    <div class="step-toggle">▼</div>
+                                </div>
+                                <div class="step-content">
+                                    <p>Install and start Elasticsearch service:</p>
+                                    <div class="command">sudo apt update</div>
+                                    <div class="command">sudo apt install elasticsearch -y</div>
+                                    <div class="command">sudo systemctl start elasticsearch</div>
+                                    <div class="command">sudo systemctl enable elasticsearch</div>
+                                    <div class="success">✅ Elasticsearch is running on port 9200!</div>
+                                </div>
+                            </div>
+                            
+                            <div class="step">
+                                <div class="step-header" onclick="toggleStep(this)">
+                                    <div class="step-number">4</div>
+                                    <div class="step-title">Install & Configure Kibana</div>
+                                    <div class="step-toggle">▼</div>
+                                </div>
+                                <div class="step-content">
+                                    <p>Install Kibana and configure network access:</p>
+                                    <div class="command">sudo apt install kibana -y</div>
+                                    <div class="command">sudo nano /etc/kibana/kibana.yml</div>
+                                    <div class="config">server.port: 5601
+server.host: "0.0.0.0"</div>
+                                    <div class="command">sudo systemctl start kibana</div>
+                                    <div class="command">sudo systemctl enable kibana</div>
+                                    <div class="success">✅ Kibana accessible at http://YOUR_IP:5601</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Phase 3: Data Pipeline Setup -->
+            <div class="phase">
+                <div class="phase-marker">🔄</div>
+                <div class="phase-content">
+                    <div class="phase-left">
+                        <h2 class="phase-title">Phase 3: Data Pipeline</h2>
+                        <p class="phase-description">
+                            Set up Filebeat and Logstash to create a complete data pipeline for log collection, processing, and forwarding.
+                        </p>
+                    </div>
+                    <div class="phase-right">
+                        <div class="steps-container">
+                            <div class="step">
+                                <div class="step-header" onclick="toggleStep(this)">
+                                    <div class="step-number">5</div>
+                                    <div class="step-title">Install & Configure Filebeat</div>
+                                    <div class="step-toggle">▼</div>
+                                </div>
+                                <div class="step-content">
+                                    <p>Install Filebeat and enable system module:</p>
+                                    <div class="command">sudo apt install filebeat -y</div>
+                                    <div class="command">sudo filebeat modules enable system</div>
+                                    <div class="command">sudo nano /etc/filebeat/filebeat.yml</div>
+                                    <div class="config"># Comment out Elasticsearch output
+# output.elasticsearch:
+#   hosts: ["localhost:9200"]
+
+# Configure Logstash output
+output.logstash:
+  hosts: ["localhost:5044"]</div>
+                                    <div class="command">sudo systemctl start filebeat</div>
+                                    <div class="command">sudo systemctl enable filebeat</div>
+                                </div>
+                            </div>
+                            
+                            <div class="step">
+                                <div class="step-header" onclick="toggleStep(this)">
+                                    <div class="step-number">6</div>
+                                    <div class="step-title">Install & Configure Logstash</div>
+                                    <div class="step-toggle">▼</div>
+                                </div>
+                                <div class="step-content">
+                                    <p>Install Logstash and create processing pipeline:</p>
+                                    <div class="command">sudo apt install logstash -y</div>
+                                    <div class="command">sudo nano /etc/logstash/conf.d/02-beats-input.conf</div>
+                                    <div class="config">input {
+  beats {
+    port => 5044
+  }
+}
+
+output {
+  elasticsearch {
+    hosts => ["http://localhost:9200"]
+    index => "%{[@metadata][beat]}-%{[@metadata][version]}-%{+YYYY.MM.dd}"
+  }
+}</div>
+                                    <div class="command">sudo systemctl start logstash</div>
+                                    <div class="command">sudo systemctl enable logstash</div>
+                                    <div class="success">✅ Data pipeline is active!</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Phase 4: Visualization & Monitoring -->
+            <div class="phase">
+                <div class="phase-marker">📊</div>
+                <div class="phase-content">
+                    <div class="phase-left">
+                        <h2 class="phase-title">Phase 4: Visualization & Alerting</h2>
+                        <p class="phase-description">
+                            Configure Kibana for data exploration, create visualizations, and set up automated alerting for security monitoring.
+                        </p>
+                    </div>
+                    <div class="phase-right">
+                        <div class="steps-container">
+                            <div class="step">
+                                <div class="step-header" onclick="toggleStep(this)">
+                                    <div class="step-number">7</div>
+                                    <div class="step-title">Create Index Pattern</div>
+                                    <div class="step-toggle">▼</div>
+                                </div>
+                                <div class="step-content">
+                                    <p>Set up index pattern in Kibana to access your log data:</p>
+                                    <div class="note">
+                                        <strong>Steps in Kibana UI:</strong><br>
+                                        1. Navigate to Stack Management → Index Patterns<br>
+                                        2. Click "Create index pattern"<br>
+                                        3. Enter pattern: <strong>filebeat-*</strong><br>
+                                        4. Select time filter field: <strong>@timestamp</strong>
+                                    </div>
+                                    <div class="success">✅ Index pattern created successfully!</div>
+                                </div>
+                            </div>
+                            
+                            <div class="step">
+                                <div class="step-header" onclick="toggleStep(this)">
+                                    <div class="step-number">8</div>
+                                    <div class="step-title">Setup Security Alerting</div>
+                                    <div class="step-toggle">▼</div>
+                                </div>
+                                <div class="step-content">
+                                    <p>Configure automated alerts for security monitoring:</p>
+                                    <div class="note">
+                                        <strong>SSH Failed Login Alert:</strong><br>
+                                        1. Go to Stack Management → Rules and Connectors<br>
+                                        2. Create rule with type: <strong>Log threshold</strong><br>
+                                        3. Condition: Count within last 5 minutes<br>
+                                        4. Filter: <strong>system.auth.ssh.event : "Failed"</strong><br>
+                                        5. Threshold: <strong>Above 5</strong><br>
+                                        6. Configure notification action
+                                    </div>
+                                    <div class="success">✅ Security monitoring active!</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="verification-section">
+            <h2>🔍 System Verification</h2>
+            <p>Verify your ELK Stack installation with these checks:</p>
+            <div class="verification-grid">
+                <div class="verification-item">
+                    <h4>🔍 Elasticsearch</h4>
+                    <div class="command" style="background: rgba(255,255,255,0.1); margin: 10px 0;">curl -X GET "localhost:9200/"</div>
+                    <p>Should return cluster information</p>
+                </div>
+                <div class="verification-item">
+                    <h4>📊 Kibana</h4>
+                    <p>Access: <strong>http://YOUR_IP:5601</strong></p>
+                    <p>Should show Kibana login page</p>
+                </div>
+                <div class="verification-item">
+                    <h4>📄 Filebeat</h4>
+                    <div class="command" style="background: rgba(255,255,255,0.1); margin: 10px 0;">sudo systemctl status filebeat</div>
+                    <p>Should show "active (running)"</p>
+                </div>
+                <div class="verification-item">
+                    <h4>⚙️ Logstash</h4>
+                    <div class="command" style="background: rgba(255,255,255,0.1); margin: 10px 0;">sudo systemctl status logstash</div>
+                    <p>Should show "active (running)"</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function toggleStep(header) {
+            const step = header.parentElement;
+            const isActive = step.classList.contains('active');
+            
+            // Close all other steps
+            document.querySelectorAll('.step').forEach(s => {
+                s.classList.remove('active');
+            });
+            
+            // Toggle current step
+            if (!isActive) {
+                step.classList.add('active');
+            }
+        }
+        
+        // Auto-expand first step of each phase
+        document.addEventListener('DOMContentLoaded', function() {
+            const firstSteps = document.querySelectorAll('.steps-container .step:first-child');
+            firstSteps.forEach(step => {
+                step.classList.add('active');
+            });
+        });
+        
+        // Add smooth scrolling for timeline navigation
+        const phases = document.querySelectorAll('.phase');
+        phases.forEach((phase, index) => {
+            phase.style.animationDelay = `${index * 0.2}s`;
+        });
+    </script>
+    <footer class="custom-footer">
+        Created by Minhaj Miflal
+    </footer>
+</body>
+</html>
